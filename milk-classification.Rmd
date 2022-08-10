@@ -1,0 +1,56 @@
+---
+title: "Milk Classification"
+author: "Alicia Key"
+date: "2022-08-10"
+output: html_document
+---
+
+# Milk Classification
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(readr)
+library(dplyr)
+library(rsample)
+library(parsnip)
+library(yardstick)
+library(broom)
+library(ggplot2)
+library(tune)
+```
+
+## Load the data
+
+```{r}
+milk_raw <- read_csv("data/milknew.csv")
+knitr::kable(head(milk_raw))
+```
+
+## Clean the data
+
+Specifically, the outcome variable, `Grade`, needs to be a factor with two levels for use with yardstick at the end. The event of interest will be "good" milk. In the original dataset, there are 3 qualities of milk: high, medium, and low. I will group high and medium into "good" milk and low into "bad" milk.
+
+Ultimately, the event of interest for the Quality column will be the first level of good milk.
+
+```{r}
+milk_clean <- milk_raw %>%
+  transmute(
+    pH,
+    Temperature = Temprature,
+    Odor,
+    Fat,
+    Turbidity,
+    Color = Colour,
+    Quality = factor(
+      case_when(
+        Grade == "high" ~ "good",
+        Grade == "medium" ~ "good",
+        Grade == "low" ~ "bad"
+      ),
+      levels = c("good", "bad")
+    )
+  )
+```
