@@ -1,0 +1,121 @@
+---
+title: "Milk Classification"
+author: "Alicia Key"
+date: "2022-08-10"
+output: html_document
+---
+
+# Milk Classification
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(readr)
+library(dplyr)
+library(rsample)
+library(parsnip)
+library(yardstick)
+library(broom)
+library(ggplot2)
+library(tune)
+```
+
+## Load the data
+
+```{r}
+milk_raw <- read_csv("data/milknew.csv")
+knitr::kable(head(milk_raw))
+```
+
+## Clean the data
+
+Specifically, the outcome variable, `Grade`, needs to be a factor with two levels for use with yardstick at the end. The event of interest will be "good" milk. In the original dataset, there are 3 qualities of milk: high, medium, and low. I will group high and medium into "good" milk and low into "bad" milk.
+
+Ultimately, the event of interest for the Quality column will be the factor's first level of "good" milk.
+
+Also, `Temperature` was misspelled, so I fix that here also.
+
+```{r}
+milk_clean <- milk_raw %>%
+  transmute(
+    pH,
+    Temperature = Temprature,
+    Odor,
+    Fat,
+    Turbidity,
+    Color = Colour,
+    Quality = factor(
+      case_when(
+        Grade == "high" ~ "good",
+        Grade == "medium" ~ "good",
+        Grade == "low" ~ "bad"
+      ),
+      levels = c("good", "bad")
+    )
+  )
+
+knitr::kable(head(milk_clean))
+```
+
+## Split the data, fit the model, and get the results
+
+### Train/test split and model setup
+
+```{r}
+milk_split <- initial_split(milk_clean, prop = 0.75, strata = Quality)
+
+logistic_model <- logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+```
+
+### Fit the model to the training set
+
+```{r}
+logistic_last_fit <- logistic_model %>%
+  last_fit(Quality ~ ., split = milk_split)
+```
+
+## Evaluate the performance
+
+### Collect ROC AUC and accuracy metrics.
+
+```{r}
+logistic_last_fit %>%
+  collect_metrics() %>%
+  knitr::kable()
+```
+
+### Collect predictions on test data set for further evaluation
+
+```{r}
+logistic_last_fit_results <- logistic_last_fit %>%
+  collect_predictions()
+```
+
+### Plot the ROC curve
+
+```{r}
+logistic_last_fit_results %>%
+  roc_curve(truth = Quality, .pred_good) %>%
+  autoplot()
+```
+
+### Make a mosaic plot
+
+```{r}
+logistic_last_fit_results %>%
+  conf_mat(truth = Quality, estimate = .pred_class) %>%
+  autoplot(type = "mosaic")
+```
+
+### Collect all metrics
+
+```{r}
+logistic_last_fit_results %>%
+  conf_mat(truth = Quality, estimate = .pred_class) %>%
+  summary() %>%
+  knitr::kable()
+```

@@ -37,3 +37,12 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Ignore macOS junk
+.DS_Store
+
+# Ignore the Rproj files
+*.Rproj
+
+# Ignore intermediate html files
+*.html
