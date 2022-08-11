@@ -1,15 +1,36 @@
 ---
-title: "Milk Classification"
+title: "R: Milk quality binary classification"
 author: "Alicia Key"
 date: "2022-08-10"
 output: html_document
 ---
 
-# Milk Classification
+# Milk quality binary classification
+
+## Overview
+
+I was looking for a dataset on which to train a binary classifier, and I found data for dairy milk quality prediction on Kaggle. Posted by Shrijayan Rajendran and located at [https://www.kaggle.com/datasets/cpluzshrijayan/milkquality](https://www.kaggle.com/datasets/cpluzshrijayan/milkquality), it has a single outcome variable that classifies milk into three qualities: "low," "medium," and "high." Seven predictor variables accompany these quality ratings. Conveniently, there are no missing values in the dataset.
+
+Ultimately, I converted the three qualities into new categories with just two types. I then trained a logistic regression which achieved the following metrics:
+
+| **Metric** | **Value** |
+|---|---|
+| accuracy | 85% |
+| sensitivity | 90% |
+| specificty | 77% |
+| ROC AUC | 0.92 |
+
+The rest of this post describes my methods and next steps that might improve the model.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+## Methods
+
+### R libraries I used
+
+I used R with the tidyverse tools for data import and preprocessing, along with tidymodels for creating a logistic regression model and assessing its performance.
 
 ```{r, include=FALSE}
 library(readr)
@@ -22,20 +43,18 @@ library(ggplot2)
 library(tune)
 ```
 
-## Load the data
+### Initial data load
+
+In the dataset, there are 1,059 observations with eight variables each. There is no missing data.
 
 ```{r}
 milk_raw <- read_csv("data/milknew.csv")
 knitr::kable(head(milk_raw))
 ```
 
-## Clean the data
+### Preprocessing
 
-Specifically, the outcome variable, `Grade`, needs to be a factor with two levels for use with yardstick at the end. The event of interest will be "good" milk. In the original dataset, there are 3 qualities of milk: high, medium, and low. I will group high and medium into "good" milk and low into "bad" milk.
-
-Ultimately, the event of interest for the Quality column will be the factor's first level of "good" milk.
-
-Also, `Temperature` was misspelled, so I fix that here also.
+I only performed one preprocessing step to create a binary classification from three original classes. Because there are three classes in the data, and I could only use two for a binary classifier, I combined the initial "high" and "medium" qualities into a new category I called "good" and the original "low" quality into a new category called "bad." I then used these new categories to train the binary classifier. My positive event is finding milk of "good" quality, so I make "good" the first factor level for the outcome variable.
 
 ```{r}
 milk_clean <- milk_raw %>%
@@ -60,9 +79,9 @@ milk_clean <- milk_raw %>%
 knitr::kable(head(milk_clean))
 ```
 
-## Split the data, fit the model, and get the results
+### Model setup and training
 
-### Train/test split and model setup
+I used 793 rows for training and 266 rows for testing. First, I set up a logistic regression binary classifier using R's `glm` function. Then, I predicted the class (stored as the variable `Quality`) using every other variable.
 
 ```{r}
 milk_split <- initial_split(milk_clean, prop = 0.75, strata = Quality)
@@ -70,18 +89,14 @@ milk_split <- initial_split(milk_clean, prop = 0.75, strata = Quality)
 logistic_model <- logistic_reg() %>%
   set_engine("glm") %>%
   set_mode("classification")
-```
 
-### Fit the model to the training set
-
-```{r}
 logistic_last_fit <- logistic_model %>%
   last_fit(Quality ~ ., split = milk_split)
 ```
 
-## Evaluate the performance
+## Results
 
-### Collect ROC AUC and accuracy metrics.
+### ROC AUC and accuracy metrics
 
 ```{r}
 logistic_last_fit %>%
@@ -89,22 +104,16 @@ logistic_last_fit %>%
   knitr::kable()
 ```
 
-### Collect predictions on test data set for further evaluation
+### ROC curve and mosaic plot
 
 ```{r}
 logistic_last_fit_results <- logistic_last_fit %>%
   collect_predictions()
-```
 
-### Plot the ROC curve
-
-```{r}
 logistic_last_fit_results %>%
   roc_curve(truth = Quality, .pred_good) %>%
   autoplot()
 ```
-
-### Make a mosaic plot
 
 ```{r}
 logistic_last_fit_results %>%
@@ -112,7 +121,9 @@ logistic_last_fit_results %>%
   autoplot(type = "mosaic")
 ```
 
-### Collect all metrics
+The ROC plot shows the ROC AUC of 0.92 visually. In the mosaic plot, we see the sensitivity of 90% is better than the specificity of 77%.
+
+### All metrics
 
 ```{r}
 logistic_last_fit_results %>%
@@ -120,3 +131,8 @@ logistic_last_fit_results %>%
   summary() %>%
   knitr::kable()
 ```
+
+## Conclusion and next steps
+
+I was happy with how simple it was to set up the logistic model using tidymodels and achieve decent results with such a basic model. However, there is room for improvement in terms of specificity. The next step would be to try more complex binary classification models to determine if they can achieve better metrics.
+
