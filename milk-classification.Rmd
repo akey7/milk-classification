@@ -83,10 +83,9 @@ logistic_last_fit <- logistic_model %>%
 ### Collect ROC AUC and accuracy metrics.
 
 ```{r}
-logistic_metrics <- logistic_last_fit %>%
-  collect_metrics()
-
-knitr::kable(logistic_metrics)
+logistic_last_fit %>%
+  collect_metrics() %>%
+  knitr::kable()
 ```
 
 ### Collect predictions on test data set for further evaluation
@@ -104,3 +103,19 @@ logistic_last_fit_results %>%
   autoplot()
 ```
 
+### Make a mosaic plot
+
+```{r}
+logistic_last_fit_results %>%
+  conf_mat(truth = Quality, estimate = .pred_class) %>%
+  autoplot(type = "mosaic")
+```
+
+### Collect all metrics
+
+```{r}
+logistic_last_fit_results %>%
+  conf_mat(truth = Quality, estimate = .pred_class) %>%
+  summary() %>%
+  knitr::kable()
+```
