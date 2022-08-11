@@ -33,7 +33,9 @@ knitr::kable(head(milk_raw))
 
 Specifically, the outcome variable, `Grade`, needs to be a factor with two levels for use with yardstick at the end. The event of interest will be "good" milk. In the original dataset, there are 3 qualities of milk: high, medium, and low. I will group high and medium into "good" milk and low into "bad" milk.
 
-Ultimately, the event of interest for the Quality column will be the first level of good milk.
+Ultimately, the event of interest for the Quality column will be the factor's first level of "good" milk.
+
+Also, `Temperature` was misspelled, so I fix that here also.
 
 ```{r}
 milk_clean <- milk_raw %>%
@@ -53,4 +55,52 @@ milk_clean <- milk_raw %>%
       levels = c("good", "bad")
     )
   )
+
+knitr::kable(head(milk_clean))
 ```
+
+## Split the data, fit the model, and get the results
+
+### Train/test split and model setup
+
+```{r}
+milk_split <- initial_split(milk_clean, prop = 0.75, strata = Quality)
+
+logistic_model <- logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+```
+
+### Fit the model to the training set
+
+```{r}
+logistic_last_fit <- logistic_model %>%
+  last_fit(Quality ~ ., split = milk_split)
+```
+
+## Evaluate the performance
+
+### Collect ROC AUC and accuracy metrics.
+
+```{r}
+logistic_metrics <- logistic_last_fit %>%
+  collect_metrics()
+
+knitr::kable(logistic_metrics)
+```
+
+### Collect predictions on test data set for further evaluation
+
+```{r}
+logistic_last_fit_results <- logistic_last_fit %>%
+  collect_predictions()
+```
+
+### Plot the ROC curve
+
+```{r}
+logistic_last_fit_results %>%
+  roc_curve(truth = Quality, .pred_good) %>%
+  autoplot()
+```
+
