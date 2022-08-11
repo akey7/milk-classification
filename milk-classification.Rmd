@@ -45,6 +45,7 @@ milk_clean <- milk_raw %>%
     Odor,
     Fat,
     Turbidity,
+    Taste,
     Color = Colour,
     Quality = factor(
       case_when(
