@@ -43,3 +43,6 @@ vignettes/*.pdf
 
 # Ignore the Rproj files
 *.Rproj
+
+# Ignore intermediate html files
+*.html
